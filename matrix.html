@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>root@portfolio:~$ </title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0e27;
+            --terminal-bg: #0d1117;
+            --text: #00ff41;
+            --text-dim: #33ff66;
+            --text-dimmer: #66ff88;
+            --cursor: #00ff41;
+            --error: #ff3366;
+            --warning: #ffaa00;
+            --info: #00aaff;
+            --border: #1a1f36;
+            --glow: rgba(0, 255, 65, 0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Matrix Rain Background */
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.15;
+        }
+
+        /* Scanline effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 1000;
+            animation: scanline 8s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(10px); }
+        }
+
+        /* CRT flicker */
+        @keyframes flicker {
+            0% { opacity: 0.97; }
+            5% { opacity: 1; }
+            10% { opacity: 0.97; }
+            15% { opacity: 1; }
+            20% { opacity: 0.97; }
+            100% { opacity: 1; }
+        }
+
+        .container {
+            animation: flicker 0.15s infinite;
+        }
+
+        /* Terminal Window */
+        .terminal-window {
+            max-width: 1200px;
+            margin: 2rem auto;
+            background: var(--terminal-bg);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 65, 0.1),
+                0 0 40px rgba(0, 255, 65, 0.05),
+                inset 0 0 100px rgba(0, 255, 65, 0.02);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .terminal-header {
+            background: #161b22;
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .terminal-button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .terminal-button.close { background: #ff5f56; }
+        .terminal-button.minimize { background: #ffbd2e; }
+        .terminal-button.maximize { background: #27c93f; }
+
+        .terminal-title {
+            margin-left: 1rem;
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+
+        .terminal-body {
+            padding: 2rem;
+            min-height: 300px;
+        }
+
+        /* Header Section */
+        .ascii-art {
+            color: var(--text);
+            font-size: 0.7rem;
+            line-height: 1.2;
+            white-space: pre;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 10px var(--glow);
+            animation: glowPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes glowPulse {
+            0%, 100% { text-shadow: 0 0 10px var(--glow); }
+            50% { text-shadow: 0 0 20px var(--glow), 0 0 30px var(--glow); }
+        }
+
+        .prompt {
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        .prompt::before {
+            content: '> ';
+            color: var(--text-dim);
+        }
+
+        .command {
+            color: var(--info);
+            font-weight: 500;
+        }
+
+        .output {
+            color: var(--text-dimmer);
+            margin-left: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Typing Animation */
+        .typed-text {
+            display: inline-block;
+            border-right: 2px solid var(--cursor);
+            animation: blink 0.7s step-end infinite;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        @keyframes blink {
+            50% { border-color: transparent; }
+        }
+
+        /* Section Headers */
+        .section-header {
+            color: var(--warning);
+            font-size: 1.2rem;
+            margin: 2rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px dashed var(--border);
+            text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+        }
+
+        .section-header::before {
+            content: '# ';
+            color: var(--text-dim);
+        }
+
+        /* Projects */
+        .project-item {
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: rgba(26, 31, 54, 0.5);
+            border-left: 3px solid var(--text);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .project-item:hover {
+            background: rgba(26, 31, 54, 0.8);
+            border-left-color: var(--warning);
+            transform: translateX(5px);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.1);
+        }
+
+        .project-item::before {
+            content: '[' attr(data-index) ']';
+            position: absolute;
+            left: -3rem;
+            color: var(--text-dim);
+            font-weight: 700;
+        }
+
+        .project-title {
+            color: var(--text);
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 5px var(--glow);
+        }
+
+        .project-meta {
+            color: var(--text-dimmer);
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+
+        .project-meta span {
+            margin-right: 1rem;
+        }
+
+        .project-meta .lang {
+            color: var(--info);
+        }
+
+        .project-meta .status {
+            color: var(--warning);
+        }
+
+        .project-description {
+            color: var(--text-dimmer);
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        .project-links a {
+            color: var(--text);
+            text-decoration: none;
+            margin-right: 1.5rem;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .project-links a::before {
+            content: '$ ';
+            color: var(--text-dim);
+        }
+
+        .project-links a:hover {
+            color: var(--warning);
+            text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+        }
+
+        /* Skills Grid */
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .skill-category {
+            background: rgba(26, 31, 54, 0.5);
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .skill-category:hover {
+            border-color: var(--text);
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+        }
+
+        .skill-category h3 {
+            color: var(--info);
+            font-size: 0.9rem;
+            margin-bottom: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .skill-category h3::before {
+            content: '└─ ';
+            color: var(--text-dim);
+        }
+
+        .skill-list {
+            list-style: none;
+        }
+
+        .skill-list li {
+            color: var(--text-dimmer);
+            font-size: 0.85rem;
+            padding: 0.3rem 0;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .skill-list li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: var(--text);
+        }
+
+        .skill-level {
+            display: inline-block;
+            margin-left: 0.5rem;
+            color: var(--text-dim);
+        }
+
+        /* Contact Section */
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .contact-method {
+            background: rgba(26, 31, 54, 0.5);
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .contact-method:hover {
+            border-color: var(--text);
+            background: rgba(26, 31, 54, 0.8);
+        }
+
+        .contact-method h3 {
+            color: var(--warning);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .contact-method a {
+            color: var(--text-dimmer);
+            text-decoration: none;
+            word-break: break-all;
+        }
+
+        .contact-method a:hover {
+            color: var(--text);
+            text-decoration: underline;
+        }
+
+        /* Command Input */
+        .command-input {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+        }
+
+        .command-input input {
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 1rem;
+            width: calc(100% - 2rem);
+            outline: none;
+        }
+
+        .command-input input::placeholder {
+            color: var(--text-dimmer);
+            opacity: 0.5;
+        }
+
+        .command-prefix {
+            color: var(--text-dim);
+            margin-right: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-dimmer);
+            font-size: 0.85rem;
+            border-top: 1px dashed var(--border);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Glitch effect for hover */
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+
+        .glitch:hover {
+            animation: glitch 0.3s ease-in-out;
+        }
+
+        /* Loading bar */
+        .loading-bar {
+            height: 3px;
+            background: var(--border);
+            position: relative;
+            overflow: hidden;
+            border-radius: 2px;
+            margin: 1rem 0;
+        }
+
+        .loading-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 40%;
+            background: var(--text);
+            animation: loading 2s ease-in-out infinite;
+            box-shadow: 0 0 10px var(--glow);
+        }
+
+        @keyframes loading {
+            0% { left: -40%; }
+            100% { left: 100%; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .terminal-window {
+                margin: 1rem;
+            }
+
+            .terminal-body {
+                padding: 1rem;
+            }
+
+            .ascii-art {
+                font-size: 0.5rem;
+            }
+
+            .project-item::before {
+                position: static;
+                display: block;
+                margin-bottom: 0.5rem;
+            }
+
+            .skills-grid,
+            .contact-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix-canvas"></canvas>
+
+    <div class="container">
+        <div class="terminal-window">
+            <div class="terminal-header">
+                <span class="terminal-button close"></span>
+                <span class="terminal-button minimize"></span>
+                <span class="terminal-button maximize"></span>
+                <span class="terminal-title">root@portfolio: ~</span>
+            </div>
+            <div class="terminal-body">
+                <!-- ASCII Art Header -->
+                <div class="ascii-art">
+╔═══════════════════════════════════════════════════════════╗
+║     _    __  __    _    _    _   _                       ║
+║    / \  |  \/  |  / \  / \  | \ | |                      ║
+║   / _ \ | |\/| | / _ \/ _ \ |  \| |                      ║
+║  / ___ \| |  | |/ ___ \ ___ \| |\  |                     ║
+║ /_/   \_\_|  |_/_/   \_\   \_\_| \_|                     ║
+║                                                           ║
+║  [SOFTWARE ENGINEER] - System v2.0.25 - Status: ONLINE   ║
+╚═══════════════════════════════════════════════════════════╝
+                </div>
+
+                <div class="loading-bar"></div>
+
+                <div class="prompt">
+                    <span class="command">whoami</span>
+                </div>
+                <div class="output">
+                    → Username: <strong>Amaan Shikalgar</strong><br>
+                    → Role: Software Development Engineer<br>
+                    → Location: /home/earth/pune-india<br>
+                    → Status: Available for opportunities<br>
+                    → Expertise: Backend Development | DSA | AI/RAG Systems<br>
+                    → Education: B.E. Computer Engineering (CGPA: 7.10)
+                </div>
+
+                <!-- Projects Section -->
+                <div class="section-header">PROJECTS.db</div>
+                
+                <div class="project-item" data-index="01">
+                    <div class="project-title">> StockFlowAPI.exe</div>
+                    <div class="project-meta">
+                        <span class="lang">LANG: FastAPI, PostgreSQL, React</span>
+                        <span class="status">STATUS: Live (Mar-Apr 2026)</span>
+                    </div>
+                    <div class="project-description">
+                        Full-stack inventory management system handling 1000+ product records with CRUD operations. 
+                        Built 10+ REST API endpoints with JWT authentication using FastAPI and SQLAlchemy ORM. 
+                        Optimized queries and indexing to reduce API response time from 320ms to 230ms. 
+                        Debugged production issues including CORS using logs and request tracing.
+                    </div>
+                    <div class="project-links">
+                        <a href="https://stock-flow-api.vercel.app/" class="glitch">view_demo</a>
+                        <a href="https://github.com/AmaanShikalgar/StockFlowAPI" class="glitch">source_code</a>
+                    </div>
+                </div>
+
+                <div class="project-item" data-index="02">
+                    <div class="project-title">> RAG_PDF_Chatbot.py</div>
+                    <div class="project-meta">
+                        <span class="lang">LANG: Python, FAISS, Streamlit, LLM</span>
+                        <span class="status">STATUS: Live (Apr 2026)</span>
+                    </div>
+                    <div class="project-description">
+                        Retrieval-Augmented Generation system enabling conversational PDF interaction using semantic search. 
+                        Implemented vector-based retrieval with FAISS and sentence transformer embeddings. 
+                        Integrated LLaMA 3 via Groq API for context-aware responses. Designed overlapping chunking 
+                        strategy to improve retrieval accuracy and reduce hallucination with strict context-based prompting.
+                    </div>
+                    <div class="project-links">
+                        <a href="https://rag-pdf-chatbot-amaan.streamlit.app/" class="glitch">view_demo</a>
+                        <a href="https://github.com/AmaanShikalgar/RAG-pdf-chatbot" class="glitch">source_code</a>
+                    </div>
+                </div>
+
+                <div class="project-item" data-index="03">
+                    <div class="project-title">>Amazon Web Scrapper</div>
+                    <div class="project-meta">
+                        <span class="lang">LANG: Python, Selenium, Pandas</span>
+                        <span class="status">STATUS: Maintained</span>
+                    </div>
+                    <div class="project-description">
+                        Selected among the Top 15 teams out of 100+ participants in Smart India Hackathon. 
+                        Demonstrated problem-solving skills and teamwork in a competitive national-level hackathon. 
+                        Also serving as President of Coders Club, conducting DSA and backend development sessions for 50+ students.
+                    </div>
+                    <div class="project-links">
+                        <a href="#" class="glitch">view_demo</a>
+                        <a href="https://github.com/AmaanShikalgar/Amazon-Web-Scrapper" class="glitch">source_code</a>
+                    </div>
+                </div>
+
+                <!-- Skills Section -->
+<div class="section-header">SKILLS.json</div>
+
+<div class="skills-grid">
+
+    <div class="skill-category">
+        <h3>Languages</h3>
+        <ul class="skill-list">
+            <li>C++ (STL) <span class="skill-level">[█████████░]</span></li>
+            <li>Python <span class="skill-level">[█████████░]</span></li>
+        </ul>
+    </div>
+
+    <div class="skill-category">
+        <h3>CS Fundamentals</h3>
+        <ul class="skill-list">
+            <li>Data Structures & Algorithms <span class="skill-level">[█████████░]</span></li>
+            <li>Object-Oriented Programming <span class="skill-level">[█████████░]</span></li>
+            <li>DBMS <span class="skill-level">[█████████░]</span></li>
+            <li>Operating Systems <span class="skill-level">[████████░░]</span></li>
+            <li>Computer Networks <span class="skill-level">[████████░░]</span></li>
+        </ul>
+    </div>
+
+    <div class="skill-category">
+        <h3>Backend</h3>
+        <ul class="skill-list">
+            <li>FastAPI <span class="skill-level">[█████████░]</span></li>
+            <li>Flask <span class="skill-level">[████████░░]</span></li>
+            <li>REST APIs <span class="skill-level">[█████████░]</span></li>
+            <li>API Design <span class="skill-level">[█████████░]</span></li>
+        </ul>
+    </div>
+
+    <div class="skill-category">
+        <h3>Databases</h3>
+        <ul class="skill-list">
+            <li>PostgreSQL <span class="skill-level">[█████████░]</span></li>
+            <li>SQL <span class="skill-level">[█████████░]</span></li>
+            <li>Query Optimization <span class="skill-level">[████████░░]</span></li>
+            <li>Indexing <span class="skill-level">[████████░░]</span></li>
+        </ul>
+    </div>
+
+    <div class="skill-category">
+        <h3>AI / ML</h3>
+        <ul class="skill-list">
+            <li>RAG Systems <span class="skill-level">[█████████░]</span></li>
+            <li>Vector Search (FAISS) <span class="skill-level">[█████████░]</span></li>
+            <li>Embeddings <span class="skill-level">[█████████░]</span></li>
+            <li>LLM Integration (Groq / LLaMA) <span class="skill-level">[█████████░]</span></li>
+        </ul>
+    </div>
+
+    <div class="skill-category">
+        <h3>Tools & DevOps</h3>
+        <ul class="skill-list">
+            <li>Git <span class="skill-level">[█████████░]</span></li>
+            <li>Postman <span class="skill-level">[█████████░]</span></li>
+            <li>Linux <span class="skill-level">[████████░░]</span></li>
+            <li>Docker <span class="skill-level">[████████░░]</span></li>
+            <li>CI/CD <span class="skill-level">[███████░░░]</span></li>
+        </ul>
+    </div>
+
+    <div class="skill-category">
+        <h3>System & Debugging</h3>
+        <ul class="skill-list">
+            <li>System Design (Basics) <span class="skill-level">[████████░░]</span></li>
+            <li>Debugging (Logs & Tracing) <span class="skill-level">[█████████░]</span></li>
+        </ul>
+    </div>
+
+</div>
+
+                <!-- Contact Section -->
+                <div class="section-header">CONTACT.cfg</div>
+                <div class="contact-grid">
+                    <div class="contact-method">
+                        <h3>→ EMAIL</h3>
+                        <a href="mailto:amaanshikalgar2003.com">amaanshikalgar2003.com</a>
+                    </div>
+                    <div class="contact-method">
+                        <h3>→ GITHUB</h3>
+                        <a href="https://github.com/AmaanShikalgar" target="_blank">github.com/AmaanShikalgar</a>
+                    </div>
+                    <div class="contact-method">
+                        <h3>→ LINKEDIN</h3>
+                        <a href="https://www.linkedin.com/in/amaan-shikalgar/" target="_blank">linkedin.com/in/amaan-shikalgar</a>
+                    </div>
+                    <div class="contact-method">
+                        <h3>→ TWITTER</h3>
+                        <a href="https://twitter.com/yourhandle" target="_blank">@yourhandle</a>
+                    </div>
+                </div>
+
+                <!-- Command Input -->
+                <div class="command-input">
+                    <span class="command-prefix">root@portfolio:~$</span>
+                    <input type="text" id="terminalInput" placeholder="type 'help' for available commands..." />
+                </div>
+
+                <div id="commandOutput" style="margin-top: 1rem; color: var(--text-dimmer);"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 Amaan Shikalgar | Built with &lt;code&gt; and ☕ | Last updated: <span id="lastUpdate"></span></p>
+        <p style="margin-top: 0.5rem; opacity: 0.5;">System uptime: <span id="uptime">0d 0h 0m</span></p>
+    </footer>
+
+    <script>
+        // Matrix Rain Effect
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const matrix = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789@#$%^&*()*&^%+-/~{[|`]}";
+        const matrixArray = matrix.split("");
+
+        const fontSize = 14;
+        const columns = canvas.width / fontSize;
+
+        const drops = [];
+        for (let x = 0; x < columns; x++) {
+            drops[x] = Math.random() * -100;
+        }
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(10, 14, 39, 0.04)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#00ff41';
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = matrixArray[Math.floor(Math.random() * matrixArray.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        setInterval(drawMatrix, 50);
+
+        // Resize canvas on window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Terminal Input Commands
+        const terminalInput = document.getElementById('terminalInput');
+        const commandOutput = document.getElementById('commandOutput');
+
+        const commands = {
+            help: `Available commands:
+  > help      - Show this help message
+  > about     - Display information about me
+  > projects  - List all projects
+  > skills    - Show skill categories
+  > contact   - Display contact information
+  > clear     - Clear the terminal
+  > hack      - Try it and see... 😈`,
+            
+            about: `> Loading profile...
+  Name: YOUR_NAME
+  Role: Full Stack Developer & Designer
+  Passion: Creating elegant solutions to complex problems
+  Current: Open to new opportunities`,
+            
+            projects: `> Fetching project data...
+  [01] project_name_one.exe
+  [02] creative_portfolio.app
+  [03] data_visualizer.py
+  
+  Use 'scroll up' to see full project details`,
+            
+            skills: `> Analyzing skill tree...
+  ✓ Frontend Development
+  ✓ Backend Development
+  ✓ DevOps & Tools
+  ✓ UI/UX Design
+  
+  Scroll up for detailed breakdown`,
+            
+            contact: `> Retrieving contact methods...
+  Email: your.email@example.com
+  GitHub: github.com/yourusername
+  LinkedIn: linkedin.com/in/yourname
+  Twitter: @yourhandle`,
+            
+            clear: 'CLEAR',
+            
+            hack: `> Initializing hack sequence...
+  [████████████████████] 100%
+  Access Denied. Just kidding! 😄
+  But nice try, hackerman! 🕶️`
+        };
+
+        terminalInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const command = terminalInput.value.toLowerCase().trim();
+                terminalInput.value = '';
+
+                if (command === 'clear') {
+                    commandOutput.innerHTML = '';
+                } else if (commands[command]) {
+                    commandOutput.innerHTML = `<div style="margin-bottom: 1rem;">
+                        <span style="color: var(--text-dim);">> ${command}</span><br>
+                        ${commands[command].replace(/\n/g, '<br>')}
+                    </div>` + commandOutput.innerHTML;
+                } else if (command) {
+                    commandOutput.innerHTML = `<div style="margin-bottom: 1rem;">
+                        <span style="color: var(--text-dim);">> ${command}</span><br>
+                        <span style="color: var(--error);">Command not found: '${command}'. Type 'help' for available commands.</span>
+                    </div>` + commandOutput.innerHTML;
+                }
+            }
+        });
+
+        // Update last update time
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleDateString();
+
+        // Uptime counter
+        let seconds = 0;
+        setInterval(() => {
+            seconds++;
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            document.getElementById('uptime').textContent = `${days}d ${hours}h ${minutes}m`;
+        }, 1000);
+
+        // Easter egg: Konami code
+        const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+        let konamiIndex = 0;
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === konamiCode[konamiIndex]) {
+                konamiIndex++;
+                if (konamiIndex === konamiCode.length) {
+                    alert('🎮 Konami Code Activated! You found the easter egg! 🎉');
+                    document.body.style.filter = 'hue-rotate(180deg)';
+                    setTimeout(() => {
+                        document.body.style.filter = 'none';
+                    }, 3000);
+                    konamiIndex = 0;
+                }
+            } else {
+                konamiIndex = 0;
+            }
+        });
+    </script>
+</body>
+</html>
